@@ -4,24 +4,41 @@ import streamlit as st
 # --- App Title and Description ---
 st.set_page_config(page_title="Tibia Melee Skill Tracker")
 st.title("🗡️ Tibia Melee Skill Tracker")
-st.markdown("Track your melee skill progress, points remaining, and estimated training time based on loyalty bonus and hit rate.")
+st.markdown("Track your melee skill progress, points remaining, and estimated training time based on loyalty bonus and training method.")
 
 # --- User Input Form ---
 with st.form("skill_form"):
     skill = st.number_input("What is your current melee skill level?", min_value=10, max_value=200, value=102)
     percent_left = st.number_input("What is the % left to next level?", min_value=0.0, max_value=100.0, value=19.0)
     loyalty_bonus = st.number_input("What is your loyalty bonus %?", min_value=0.0, max_value=50.0, value=5.0)
-    hit_rate_per_hour = st.number_input(
-        "Estimated hits per hour while training (e.g. 7200 for 2 hits/sec):",
-        min_value=1.0, value=7200.0
+
+    training_type = st.selectbox(
+        "Training Method",
+        [
+            "Online Training (monster combat)",
+            "Offline Training (stamina bed)",
+            "Dummy Training (training weapon at dummy)"
+        ]
     )
+
     submitted = st.form_submit_button("Calculate")
+
+# --- Define hit rates based on training type ---
+HIT_RATES = {
+    "Online Training (monster combat)": 7200,      # ~2 hits/sec
+    "Offline Training (stamina bed)": 3000,        # estimated average
+    "Dummy Training (training weapon at dummy)": 2400  # ~1.5s swing speed
+}
 
 # --- Calculation Logic ---
 if submitted:
     A = 50      # Melee skill constant
     b = 1.1     # Knight vocation constant
     c = 10      # Skill offset
+
+    hit_rate_per_hour = HIT_RATES.get(training_type, 2000)
+    loyalty_multiplier = 1 + (loyalty_bonus / 100)
+    effective_hits_per_hour = hit_rate_per_hour * loyalty_multiplier
 
     progress_left = percent_left / 100
     progress_done = 1 - progress_left
@@ -33,9 +50,6 @@ if submitted:
     points_remaining = P_next * progress_left
     Tp_next = A * (b ** (skill + 1 - c) - 1) / (b - 1)
 
-    # Adjusted time calculation
-    loyalty_multiplier = 1 + (loyalty_bonus / 100)
-    effective_hits_per_hour = hit_rate_per_hour * loyalty_multiplier
     hours_remaining = points_remaining / effective_hits_per_hour if effective_hits_per_hour > 0 else 0
 
     # --- Display Results ---
@@ -47,4 +61,4 @@ if submitted:
     st.write(f"**Points Needed for Next Level:** {P_next:,.0f}")
     st.write(f"**Points Remaining to Next Level:** {points_remaining:,.0f}")
     st.write(f"**Estimated Time to Next Level:** {hours_remaining:.2f} hours")
-    st.caption(f"(Assuming {hit_rate_per_hour:,.0f} hits/hour with {loyalty_bonus:.1f}% loyalty bonus)")
+    st.caption(f"Training: {training_type} — Base hits/hour: {hit_rate_per_hour:,}, Loyalty Bonus: {loyalty_bonus:.1f}% → Effective: {effective_hits_per_hour:,.0f} hits/hour")
