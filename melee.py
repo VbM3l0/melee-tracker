@@ -37,8 +37,6 @@ if submitted:
     c = 10      # Skill offset
 
     hit_rate_per_hour = HIT_RATES.get(training_type, 2000)
-    loyalty_multiplier = 1 + (loyalty_bonus / 100)
-    effective_hits_per_hour = hit_rate_per_hour * loyalty_multiplier
 
     progress_left = percent_left / 100
     progress_done = 1 - progress_left
@@ -47,10 +45,12 @@ if submitted:
     P_next = A * (b ** (skill - c))
     points_done = P_next * progress_done
     Tp_total_now = Tp_current + points_done
-    points_remaining = P_next * progress_left
     Tp_next = A * (b ** (skill + 1 - c) - 1) / (b - 1)
 
-    hours_remaining = points_remaining / effective_hits_per_hour if effective_hits_per_hour > 0 else 0
+    # Loyalty bonus reduces required training effort
+    raw_points_remaining = P_next * progress_left
+    adjusted_points_remaining = raw_points_remaining * (1 - loyalty_bonus / 100)
+    hours_remaining = adjusted_points_remaining / hit_rate_per_hour if hit_rate_per_hour > 0 else 0
 
     # --- Display Results ---
     st.markdown("### 📊 Results")
@@ -59,6 +59,8 @@ if submitted:
     st.write(f"**Points Accumulated in Current Level:** {points_done:,.0f}")
     st.write(f"**Total Skill Points So Far:** {Tp_total_now:,.0f}")
     st.write(f"**Points Needed for Next Level:** {P_next:,.0f}")
-    st.write(f"**Points Remaining to Next Level:** {points_remaining:,.0f}")
+    st.write(f"**Raw Points Remaining:** {raw_points_remaining:,.0f}")
+    st.write(f"**Loyalty Bonus Applied ({loyalty_bonus:.1f}%):** -{(raw_points_remaining - adjusted_points_remaining):,.0f} points")
+    st.write(f"**Effective Points Remaining:** {adjusted_points_remaining:,.0f}")
     st.write(f"**Estimated Time to Next Level:** {hours_remaining:.2f} hours")
-    st.caption(f"Training: {training_type} — Base hits/hour: {hit_rate_per_hour:,}, Loyalty Bonus: {loyalty_bonus:.1f}% → Effective: {effective_hits_per_hour:,.0f} hits/hour")
+    st.caption(f"Training: {training_type} — Hits/hour: {hit_rate_per_hour:,}")
